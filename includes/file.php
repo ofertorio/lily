@@ -25,14 +25,15 @@
         /**
          * Adds a node traverser instruction
          *
+         * @param \Lily\Task &$task A reference to the task that will run this instruction
          * @param array|File\Instruction $instruction The file instruction
          * @return void
          */
-        public function add_node_instruction($instruction) {
+        public function add_node_instruction(\Lily\Task &$task, $instruction) {
             // Check if it's an array
             if (is_array($instruction)) {
                 // Convert it to an instruction
-                $instruction = new File\Instruction($instruction);
+                $instruction = new File\Instruction($instruction, $task);
             } else
             // Check if it's not an instance of File\Instruction
             if (!($instruction instanceof File\Instruction)) {
@@ -124,7 +125,7 @@
                             // Check if the condition was not met
                             if (!$condition) {
                                 // Assert the failed condition
-                                $instruction->do_assertion(File\Instruction::ASSERT_FAILED_CONDITION_NOT_MET);
+                                $instruction->do_assertion(File\Instruction::ASSERT_FAILED_CONDITION_NOT_MET, null);
 
                                 // Break the instruction
                                 break 2;

@@ -44,7 +44,7 @@
             });*/
 
             // Add the node instruction for the function rename
-            $file->add_node_instruction([
+            $file->add_node_instruction($this, [
                 // Function node
                 "node" => "\PhpParser\Node\Stmt\Function_",
                 // When entering the node

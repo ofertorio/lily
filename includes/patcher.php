@@ -213,6 +213,48 @@
         }
 
         /**
+         * Generates current execution results
+         *
+         * @return object
+         */
+        public function generate_results() {
+            $results = (object) [
+                "succeeded" => [],
+                "failed" => [],
+                "not_executed" => []
+            ];
+
+            // Iterate over all patches
+            foreach($this->patches as $patch) {
+                // Iterate over all patch tasks
+                foreach($patch->get_tasks() as $task) {
+                    // Check for this task status
+                    switch($task->get_status()) {
+                        // Case not executed
+                        case $task::STATUS_NOT_EXECUTED:
+                            // Add it to the not executed ones
+                            $results->not_executed[] = &$task;
+                        break;
+
+                        // Case succeded
+                        case $task::STATUS_SUCCEEDED:
+                            // Add it to the succeeded ones
+                            $results->succeeded[] = &$task;
+                        break;
+
+                        // Case failed
+                        case $task::STATUS_FAILED:
+                            // Add it to the failed ones
+                            $results->failed[] = &$task;
+                        break;
+                    }
+                }
+            }
+
+            return $results;
+        }
+
+        /**
          * Run the patcher, applying all to a string
          * 
          * @param string $content The content to be processed
@@ -331,10 +373,16 @@
                 }
             }
 
+            // Clear the patcher files
+            $patcher_files = null;
+
             // Save all pending files
             foreach($this->pending_saves as $file) {
                 // Save it
                 $file->save(str_replace($this->input_dir, $this->output_dir, $file->name));
             }
+
+            // Clear the pending saves
+            $this->pending_saves = [];
         }
     }

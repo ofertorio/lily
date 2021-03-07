@@ -25,7 +25,7 @@
 
         protected function run(\Lily\File $file) {
             // Add the node instruction for the variable rename
-            $file->add_node_instruction([
+            $file->add_node_instruction($this, [
                 // Variable node
                 "node" => "\PhpParser\Node\Expr\Variable",
                 // When leaving the node

@@ -12,6 +12,24 @@
         const REQUIRED_PARAMS = [];
         const OPTIONAL_PARAMS = [];
 
+        const STATUS_NOT_EXECUTED = 0;
+        const STATUS_SUCCEEDED = 1;
+        const STATUS_FAILED = -1;
+
+        /**
+         * The number of times that this task was concluded
+         *
+         * @var integer
+         */
+        private $concluded = 0;
+
+        /**
+         * The task status
+         *
+         * @var int
+         */
+        private $status = self::STATUS_NOT_EXECUTED;
+
         /**
          * The task name
          *
@@ -33,21 +51,11 @@
          */
         protected $files = null;
 
-        public function __construct(object $params = null) {
-            // Check if any file array was given
-            if (!empty($params->files)) {
-                // Force it to be an array
-                $params->files = (array) $params->files;
-
-                // Save them
-                $this->files = $params->files;
-            }
-        }
-
         /**
          * Creates a new task from a parsed comment structure
          *
          * @param object $params The parsed comment parameters
+         * @throws \Lily\Error
          * @return Task
          */
         static function from_comment(object $params) {
@@ -67,6 +75,35 @@
             $task->name = $name;
 
             return $task;
+        }
+
+        public function __construct(object $params = null) {
+            // Check if any file array was given
+            if (!empty($params->files)) {
+                // Force it to be an array
+                $params->files = (array) $params->files;
+
+                // Save them
+                $this->files = $params->files;
+            }
+        }
+
+        /**
+         * Retrieves the task status
+         *
+         * @return int
+         */
+        public function get_status() {
+            return $this->status;
+        }
+
+        /**
+         * Stops the patcher execution
+         *
+         * @return void
+         */
+        public function stop() {
+            return \Lily::instance()->stop();
         }
 
         /**
@@ -110,6 +147,7 @@
          * Runs the task for a determinated content
          *
          * @param \Lily\File|string $file The file or file name
+         * @throws \Lily\Error
          * @return string
          */
         public function apply($file = null) {
@@ -131,7 +169,28 @@
             return $this->run($file);
         }
 
+        /**
+         * Succeeds the current task
+         *
+         * @return void
+         */
+        public function succeed() {
+            // Increase the task concluded times
+            $this->concluded++;
+        }
+
+        /**
+         * Fails the current task
+         *
+         * @throws \Lily\Error
+         * @return void
+         */
+        public function fail(int $reason, $data = null) {
+            $this->status = self::STATUS_FAILED;
+        }
+
         protected function run(\Lily\File $file) {
-            throw new Error("Task {$this->name} still doesn't have a run() function.", "NOT_IMPLEMENTED_YET");
+            $this->status = self::STATUS_NOT_EXECUTED;
+            throw new Error("Task {$this->name} still doesn't have a run() function", "NOT_IMPLEMENTED_YET");
         }
     }

@@ -13,7 +13,7 @@
         protected $code;
         protected $data;
 
-        public function __construct(string $message, string $code = null, array $data = []) {
+        public function __construct(string $message, string $code = null, $data = []) {
             $this->message = $message;
             $this->code = $code;
             $this->data = $data;
