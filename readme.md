@@ -1,5 +1,6 @@
 Lily
 ===
+[Lily was a little girl](https://www.youtube.com/watch?v=hdonNbzHHXE) that wanted to create patches for PHP projects.
 This is a PHP 5.2 to PHP 8.0 patcher written in PHP. Its purpose is to simplify patching and manipulating PHP projects.
 
 Quick Start

@@ -69,11 +69,27 @@
          */
         private $pending_saves = [];
 
-        public function __construct() {
+        public function __construct(array $options = []) {
             // Iterate over the default tasks
             foreach(static::DEFAULT_TASKS as $task) {
                 // Register it
                 $this->register_task($task, "\\Lily\\Tasks\\" . $task);
+            }
+
+            /**
+             * An array of valid options
+             * 
+             * @var array[string]
+             */
+            static $valid_options = ["input_dir", "output_dir", "auto_clean"];
+
+            // Iterate over all options
+            foreach($options as $key => $value) {
+                // Check if it's a valid option
+                if (in_array($key, $valid_options)) {
+                    // Set the value
+                    $this->{$key} = $value;
+                }
             }
 
             self::$instance = $this;
@@ -106,12 +122,18 @@
          * Registers a single task
          *
          * @param string $name The task name
-         * @param string $class The task class
+         * @param string|\Lily\Task $class The task class
          * @return void
          */
-        public function register_task($name, $class) {
+        public function register_task(string $name, string $class) {
+            // Check if the task class exists
             if (!class_exists($class)) {
                 throw new \Error("Class {$class} doesn't exists.");
+            }
+
+            // Check if it's not a valid task
+            if (!is_subclass_of($class, "\Lily\Task", true)) {
+                throw new \Error("Not a valid Lily task, Lily is sad. 😞");
             }
 
             // Register it

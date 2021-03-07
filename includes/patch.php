@@ -51,6 +51,11 @@
          * @return \Lily\Task
          */
         public function add_task($task) {
+            // Check if it's a valid task
+            if (!($task instanceof \Lily\Task)) {
+                throw new \Error("Not a valid Lily patch task, Lily is sad. 😞");
+            }
+
             return array_push($this->tasks, $task);
         }
 
