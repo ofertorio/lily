@@ -15,9 +15,142 @@
         private $ast;
         private $node_finder;
 
+        private $node_instructions = [];
+
         public function __construct($name = null, $content = null) {
             $this->name = $name;
             $this->content = $content;
+        }
+
+        /**
+         * Adds a node traverser instruction
+         *
+         * @param array $instruction
+         * @return void
+         */
+        public function add_node_instruction(array $instruction) {
+            // Check if has all the needed instructions
+            if (empty($instruction["node"]) || empty($instruction["if"]) || empty($instruction["when"]) || empty($instruction["do"])) {
+                throw new \Error("A traverser instruction needs to have a node, an if condition, when to do the action and a do action.");
+            }
+
+            // Extract and unset the "when" instruction
+            $when = $instruction["when"];
+            unset($instruction["when"]);
+
+            // Create the action array if doesn't exists yet
+            $this->node_instructions[$when] = $this->node_instructions[$when] ?? [];
+
+            // Append the instruction to it
+            $this->node_instructions[$when][] = $instruction;
+        }
+
+        /**
+         * Retrieves all instructions by type
+         *
+         * @param string $type An array of instructions to be called
+         * @return array[array]
+         */
+        public function get_instructions(string $type) {
+            return $this->node_instructions[$type] ?? null;
+        }
+
+        /**
+         * Applies all node instructions to the current traverser
+         *
+         * @return void
+         */
+        private function apply_node_instructions() {
+            // Add a new node visitor to the traverser
+            $this->get_traverser()->addVisitor(new class($this) extends \PhpParser\NodeVisitorAbstract {
+                public function __construct($file) {
+                    $this->file = $file;
+                }
+
+                /**
+                 * Applies all instructions to a node for a given type
+                 *
+                 * @param string $type The instruction type to be applied
+                 * @param \PhpParser\Node $node The node to be actioned
+                 * @return \PhpParser\Node
+                 */
+                private function apply_instructions(string $type, \PhpParser\Node $node): \PhpParser\Node {
+                    // Retrieve all instructions by type
+                    $instructions = $this->file->get_instructions($type);
+
+                    // Check if has no leave instructions
+                    if (empty($instructions)) {
+                        return $node;
+                    }
+
+                    // Iterate over all instructions
+                    foreach($instructions as $instruction) {
+                        // Get the node type
+                        $instruction_node = $instruction["node"];
+
+                        // Check if it's not the same as the current node
+                        if (!($node instanceof $instruction_node)) {
+                            continue;
+                        }
+
+                        // Extract the parameters
+                        $if = $instruction["if"];
+                        $do = $instruction["do"];
+
+                        $continue = true;
+
+                        // Check for all instructions
+                        foreach($if as $index => $cnd) {
+                            // Retrieve the index value
+                            $node_index = $node->{$index};
+
+                            // Check if the condition value is a string, and node index has a toString() method
+                            if (is_string($cnd[1]) && is_callable([$node_index, "toString"])) {
+                                // Call it
+                                $node_index = $node_index->toString();
+                            }
+
+                            // Variable that will later handle if the condition was met
+                            $condition = false;
+
+                            // Evaluate the condition
+                            eval("\$condition = \$node_index " . $cnd[0] . " " . escapeshellarg($cnd[1]) . ";");
+
+                            // Check if the condition was not met
+                            if (!$condition) {
+                                // Break the instruction
+                                break 2;
+                            }
+                        }
+
+                        // Do all instructions
+                        foreach($do as $action) {
+                            // Extract the action name
+                            $action_name = $action["action"];
+                            unset($action["action"]);
+
+                            // Check if is settings variables
+                            if ($action_name === "set") {
+                                // Iterate over all variables
+                                foreach($action["vars"] ?? $action["variables"] as $var => $value) {
+                                    // Set the node variable value
+                                    $node->{$var} = $value;
+                                }
+                            }
+                        }
+                    }
+
+                    return $node;
+                }
+
+                public function leaveNode(\PhpParser\Node $node) {
+                    return $this->apply_instructions("leave", $node);
+                }
+
+                public function enterNode(\PhpParser\Node $node) {
+                    return $this->apply_instructions("enter", $node);
+                }
+            });
         }
 
         /**
@@ -31,6 +164,12 @@
             $content = $this->get_content();
 
             $ast = $this->ast ?? null;
+
+            // Check if has any traverser instruction
+            if (!empty($this->node_instructions)) {
+                // Prepare the traverser
+                $this->apply_node_instructions();
+            }
 
             // Check if any traverser was created
             if (!empty($this->traverser)) {

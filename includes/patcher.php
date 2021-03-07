@@ -213,7 +213,7 @@
          *
          * @return boolean
          */
-        public function run($content) {
+        public function run() {
             /**
              * The patcher files
              * 

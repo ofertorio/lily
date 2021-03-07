@@ -24,26 +24,26 @@
         }
 
         protected function run(\Lily\File $file) {
-            // Add a new node visitor to the traverser
-            $file->get_traverser()->addVisitor(new class($this) extends \PhpParser\NodeVisitorAbstract {
-                public function __construct($task) {
-                    $this->task = $task;
-                }
-
-                public function leaveNode(\PhpParser\Node $node) {
-                    // Check if node is a variable
-                    // and if the variable name is the same as the variable to be renamed
-                    if (
-                        $node instanceof \PhpParser\Node\Expr\Variable &&
-                        $node->name === $this->task->var
-                    ) {
-                        // Set the new name
-                        $node->name = $this->task->rename;
-
-                        return $node;
-                    }
-                }
-            });
+            // Add the node instruction for the variable rename
+            $file->add_node_instruction([
+                // Variable node
+                "node" => "\PhpParser\Node\Expr\Variable",
+                // When leaving the node
+                "when" => "leave",
+                // Checks if the name of the variable is the variable that needs to be replaced
+                "if" => [
+                    "name" => ["===", $this->var]
+                ],
+                // Do a "set" $node->name = $this->rename
+                "do" => [
+                    [
+                        "action" => "set",
+                        "vars" => [
+                            "name" => $this->rename
+                        ]
+                    ]
+                ]
+            ]);
 
             return $file;
         }
