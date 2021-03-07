@@ -69,6 +69,20 @@
          */
         private $pending_saves = [];
 
+        /**
+         * If can continue executing the patcher
+         *
+         * @var boolean
+         */
+        private $can_continue = true;
+
+        /**
+         * An array of valid options
+         * 
+         * @var array[string]
+         */
+        const VALID_OPTIONS = ["input_dir", "output_dir", "auto_clean"];
+
         public function __construct(array $options = []) {
             // Iterate over the default tasks
             foreach(static::DEFAULT_TASKS as $task) {
@@ -76,17 +90,10 @@
                 $this->register_task($task, "\\Lily\\Tasks\\" . $task);
             }
 
-            /**
-             * An array of valid options
-             * 
-             * @var array[string]
-             */
-            static $valid_options = ["input_dir", "output_dir", "auto_clean"];
-
             // Iterate over all options
             foreach($options as $key => $value) {
                 // Check if it's a valid option
-                if (in_array($key, $valid_options)) {
+                if (in_array($key, self::VALID_OPTIONS)) {
                     // Set the value
                     $this->{$key} = $value;
                 }
@@ -109,6 +116,15 @@
         }
 
         /**
+         * Stops the patcher execution
+         *
+         * @return void
+         */
+        public function stop() {
+            $this->can_continue = false;
+        }
+
+        /**
          * Retrieves a single task class
          *
          * @param string $task
@@ -128,12 +144,12 @@
         public function register_task(string $name, string $class) {
             // Check if the task class exists
             if (!class_exists($class)) {
-                throw new \Error("Class {$class} doesn't exists.");
+                throw new Error("Class {$class} doesn't exists.", "CLASS_NOT_EXISTS");
             }
 
             // Check if it's not a valid task
             if (!is_subclass_of($class, "\Lily\Task", true)) {
-                throw new \Error("Not a valid Lily task, Lily is sad. 😞");
+                throw new Error("Not a valid Lily task, Lily is sad. 😞", "INVALID_TASK");
             }
 
             // Register it
@@ -183,7 +199,7 @@
         public function add_patch($patch) {
             // Check if it's not a string and it's not a patch
             if (!is_string($patch) && !($patch instanceof Patch)) {
-                throw new \Error("Invalid patch given: not a valid string and not a Patch instance.");
+                throw new Error("Invalid patch given: not a valid string and not a Patch instance.", "INVALID_PATCH");
             }
 
             // Check if it's a string
@@ -258,7 +274,7 @@
                     // Try creating the output directory
                     if (!mkdir($this->output_dir)) {
                         // Skip the operation
-                        throw new \Error("An exception ocurred while trying to create the output directory: " . error_get_last()["message"]);
+                        throw new Error("An exception ocurred while trying to create the output directory: " . error_get_last()["message"], error_get_last()["code"]);
                     }
                 }
             }
@@ -302,7 +318,13 @@
 
                         // Check if failed to apply the task
                         if (!$result) {
-                            \Lily\Console::error("an error ocurred while doing task", $task->get_name());
+                            \Lily\Console::error("An error ocurred while doing task", $task->get_name());
+                            return false;
+                        }
+
+                        // Check if the execution was stopped
+                        if (!$this->can_continue) {
+                            // Break the execution
                             return false;
                         }
                     }

@@ -12,6 +12,11 @@
     namespace Lily;
 
     class Console {
+        /**
+         * Console text colors
+         * 
+         * @var array[string=>int]
+         */
         const CONSOLE_COLORS= [
             "black" => 40,
             "red" => 31,
@@ -31,6 +36,11 @@
             "white" => 97
         ];
 
+        /**
+         * Console background colors
+         * 
+         * @var array[string=>int]
+         */
         const CONSOLE_BACKGROUND_COLORS  = [
             "black" => 40,
             "red" => 41,

@@ -53,7 +53,7 @@
         public function add_task($task) {
             // Check if it's a valid task
             if (!($task instanceof \Lily\Task)) {
-                throw new \Error("Not a valid Lily patch task, Lily is sad. 😞");
+                throw new Error("Not a valid Lily patch task, Lily is sad. 😞", "INVALID_PATCH");
             }
 
             return array_push($this->tasks, $task);
@@ -77,7 +77,7 @@
         static function from_file(string $filename) {
             // Check if file doesn't exists
             if (!file_exists($filename)) {
-                throw new \Error("File {$filename} doesn't exists.");
+                throw new Error("File {$filename} doesn't exists.", "FILE_NOT_FOUND");
             }
 
             // Load the file
@@ -85,7 +85,7 @@
 
             // Check if doesn't contain any Lily patch
             if (strpos($content, "@lily") === -1) {
-                throw new \Error("File {$filename} doesn't seems to be a valid patch.");
+                throw new Error("File {$filename} doesn't seems to be a valid patch.", "INVALID_PATCH");
             }
 
             // Create the patch
@@ -132,7 +132,7 @@
 
                     // Check if has no task param
                     if (empty($params->task)) {
-                        throw new \Error("Tried to create a task from a comment with no task type.");
+                        throw new Error("Tried to create a task from a comment with no task type.", "INVALID_TASK");
                     }
 
                     // Try retrieving the class related to this task

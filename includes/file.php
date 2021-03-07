@@ -25,24 +25,25 @@
         /**
          * Adds a node traverser instruction
          *
-         * @param array $instruction
+         * @param array|File\Instruction $instruction The file instruction
          * @return void
          */
-        public function add_node_instruction(array $instruction) {
-            // Check if has all the needed instructions
-            if (empty($instruction["node"]) || empty($instruction["if"]) || empty($instruction["when"]) || empty($instruction["do"])) {
-                throw new \Error("A traverser instruction needs to have a node, an if condition, when to do the action and a do action.");
+        public function add_node_instruction($instruction) {
+            // Check if it's an array
+            if (is_array($instruction)) {
+                // Convert it to an instruction
+                $instruction = new File\Instruction($instruction);
+            } else
+            // Check if it's not an instance of File\Instruction
+            if (!($instruction instanceof File\Instruction)) {
+                throw new Error("Invalid node instruction", "INVALID_NODE_INSTRUCTION");
             }
 
-            // Extract and unset the "when" instruction
-            $when = $instruction["when"];
-            unset($instruction["when"]);
-
             // Create the action array if doesn't exists yet
-            $this->node_instructions[$when] = $this->node_instructions[$when] ?? [];
+            $this->node_instructions[$instruction->get_when()] = $this->node_instructions[$instruction->get_when()] ?? [];
 
             // Append the instruction to it
-            $this->node_instructions[$when][] = $instruction;
+            $this->node_instructions[$instruction->get_when()][] = $instruction;
         }
 
         /**
@@ -86,7 +87,7 @@
                     // Iterate over all instructions
                     foreach($instructions as $instruction) {
                         // Get the node type
-                        $instruction_node = $instruction["node"];
+                        $instruction_node = $instruction->node;
 
                         // Check if it's not the same as the current node
                         if (!($node instanceof $instruction_node)) {
@@ -94,8 +95,8 @@
                         }
 
                         // Extract the parameters
-                        $if = $instruction["if"];
-                        $do = $instruction["do"];
+                        $if = $instruction->if;
+                        $do = $instruction->do;
 
                         // Check for all instructions
                         foreach($if as $index => $cnd) {
@@ -122,6 +123,9 @@
 
                             // Check if the condition was not met
                             if (!$condition) {
+                                // Assert the failed condition
+                                $instruction->do_assertion(File\Instruction::ASSERT_FAILED_CONDITION_NOT_MET);
+
                                 // Break the instruction
                                 break 2;
                             }

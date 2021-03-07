@@ -58,7 +58,7 @@
             foreach(static::REQUIRED_PARAMS as $param) {
                 // Check if has no "find" or "do"
                 if (!isset($params->{$param})) {
-                    throw new \Error("Missing param `{$param}` for task `{$name}`.");
+                    throw new Error("Missing param `{$param}` for task `{$name}`.", "MISSING_PARAM");
                 }
             }
 
@@ -117,7 +117,7 @@
             if (is_string($file)) {
                 // Check if file doesn't exists
                 if (!is_file($file)) {
-                    throw new \Error("File {$file} doesn't exists.");
+                    throw new Error("File {$file} doesn't exists.", "FILE_NOT_FOUND");
                 }
 
                 // Retrieve the file content handler
@@ -132,6 +132,6 @@
         }
 
         protected function run(\Lily\File $file) {
-            throw new \Error("Task {$this->name} still doesn't have a run() function.");
+            throw new Error("Task {$this->name} still doesn't have a run() function.", "NOT_IMPLEMENTED_YET");
         }
     }
