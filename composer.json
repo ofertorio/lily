@@ -1,0 +1,13 @@
+{
+    "name": "theprometeus/lily-php-patcher",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Matheus Giovani",
+            "email": "teusgiovani@gmail.com"
+        }
+    ],
+    "require": {
+        "nikic/php-parser": "^4.10"
+    }
+}
