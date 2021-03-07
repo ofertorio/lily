@@ -47,8 +47,6 @@ patch.php
 
 ```php
 <?php
-    require_once __DIR__ . "/../autoload.php";
-
     $patcher = new \Lily\Patcher([
         "input_dir" => ABSPATH,
         "output_dir" => ABSPATH . "/patched"
@@ -56,4 +54,54 @@ patch.php
 
     $patcher->add_patch("patch.php");
     $patcher->run();
+```
+
+Node Instructions
+---
+
+You can pass node instructions to your patch tasks.
+Node instructions are no-code friendly instructions that you can give to the PHPParser node visitor.
+
+```php
+<?php
+    $patcher = new \Lily\Patcher();
+
+    $content = <<<CODE
+        <?php
+            function function_that_will_be_renamed() {
+                echo "This long function name will be renamed to fn_renamed, isn't it great?";
+            }
+    CODE;
+
+    $patch = new \Lily\Patch;
+    $patch->add_task(new class extends \Lily\Task {
+        public function run(\Lily\File $file) {
+            // Rename all functions "function_that_will_be_renamed" to "fn_renamed"
+            $file->add_node_instruction([
+                "node" => "\PhpParser\Node\Stmt\Function_",
+                "when" => "enter",
+                "if" => [
+                    "name" => ["==", "function_that_will_be_renamed"],
+                    // Can also use a callable if wanted
+                    function(\PhpParser\Node $node) {
+                        return $node->name->toString() !== "function_that_cant_be_renamed";
+                    }
+                ],
+                "do" => [
+                    [
+                        "action" => "set",
+                        "vars" => [
+                            "name" => "fn_renamed"
+                        ]
+                    ]
+                ]
+            ]);
+
+            return $file;
+        }
+    });
+
+    $patcher->add_patch($patch);
+
+    echo $patcher->apply($content);
 ```

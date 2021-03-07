@@ -205,7 +205,7 @@
                 }
             }
 
-            return $file->get_content();
+            return $file->get_modified_content();
         }
 
         /**

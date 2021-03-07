@@ -97,24 +97,28 @@
                         $if = $instruction["if"];
                         $do = $instruction["do"];
 
-                        $continue = true;
-
                         // Check for all instructions
                         foreach($if as $index => $cnd) {
-                            // Retrieve the index value
-                            $node_index = $node->{$index};
-
-                            // Check if the condition value is a string, and node index has a toString() method
-                            if (is_string($cnd[1]) && is_callable([$node_index, "toString"])) {
-                                // Call it
-                                $node_index = $node_index->toString();
-                            }
-
                             // Variable that will later handle if the condition was met
                             $condition = false;
 
-                            // Evaluate the condition
-                            eval("\$condition = \$node_index " . $cnd[0] . " " . escapeshellarg($cnd[1]) . ";");
+                            // Check if condition is a callback
+                            if (is_callable($cnd)) {
+                                // Try matching it with the current node
+                                $condition = call_user_func_array($cnd, [$node]);
+                            } else {
+                                // Retrieve the index value
+                                $node_index = $node->{$index};
+
+                                // Check if the condition value is a string, and node index has a toString() method
+                                if (is_string($cnd[1]) && is_callable([$node_index, "toString"])) {
+                                    // Call it
+                                    $node_index = $node_index->toString();
+                                }
+
+                                // Evaluate the condition
+                                eval("\$condition = \$node_index " . $cnd[0] . " " . escapeshellarg($cnd[1]) . ";");
+                            }
 
                             // Check if the condition was not met
                             if (!$condition) {
@@ -160,32 +164,8 @@
          * @return boolean
          */
         public function save(string $output) {
-            // First of all, get the contents
-            $content = $this->get_content();
-
-            $ast = $this->ast ?? null;
-
-            // Check if has any traverser instruction
-            if (!empty($this->node_instructions)) {
-                // Prepare the traverser
-                $this->apply_node_instructions();
-            }
-
-            // Check if any traverser was created
-            if (!empty($this->traverser)) {
-                // Let the traverser perform
-                $ast = $this->traverser->traverse($this->get_ast());
-            }
-
-            // Check if the AST was created
-            if (!empty($ast)) {
-                // Convert it back to PHP
-                $pretty_printer = new \PhpParser\PrettyPrinter\Standard();
-                $content = $pretty_printer->printFormatPreserving($ast, $this->ast, $this->tokens);
-
-                // Fix some buggy issues with the format preserving
-                $content = preg_replace("/(function .+?)\n.+\{/m", '$1 {', $content);
-            }
+            // Process and get the modified content
+            $content = $this->get_modified_content();
 
             \Lily\Console::log("saving", basename($this->name), "to", $output);
             return file_put_contents($output, $content);
@@ -213,6 +193,42 @@
          */
         public function set_content(string $content) {
             $this->content = $content;
+        }
+
+        /**
+         * Returns the parsed and modified file content
+         *
+         * @return string
+         */
+        public function get_modified_content() {
+            // First of all, get the contents
+            $content = $this->get_content();
+
+            $ast = $this->ast ?? null;
+
+            // Check if has any traverser instruction
+            if (!empty($this->node_instructions)) {
+                // Prepare the traverser
+                $this->apply_node_instructions();
+            }
+
+            // Check if any traverser was created
+            if (!empty($this->traverser)) {
+                // Let the traverser perform
+                $ast = $this->traverser->traverse($this->get_ast());
+            }
+
+            // Check if the AST was created
+            if (!empty($ast)) {
+                // Convert it back to PHP
+                $pretty_printer = new \PhpParser\PrettyPrinter\Standard();
+                $content = $pretty_printer->printFormatPreserving($ast, $this->ast, $this->tokens);
+
+                // Fix some buggy issues with the format preserving
+                $content = preg_replace("/(function .+?)\n.+\{/m", '$1 {', $content);
+            }
+
+            return $content;
         }
 
         /**
