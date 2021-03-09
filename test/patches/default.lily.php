@@ -37,8 +37,8 @@
      */
 
     /**
-     * @lily she grow up within her castle walls
-     * @task RefactorFunction
+     * @lily will overwrite all functions named `function_that_will_be_refactored` with the function below
+     * @task OverwriteFunction
      * @function function_that_will_be_refactored
      */
     function function_that_will_be_refactored() {

@@ -1,6 +1,6 @@
 <?php
     /**
-     * Lily - Task to refactor functions
+     * Lily - Task to overwrite functions
      * 
      * @author Matheus <matheus@ad3com.com.br>
      * @since 1.0.0
@@ -8,10 +8,10 @@
 
     namespace Lily\Tasks;
 
-    class RefactorFunction extends \Lily\Task {
+    class OverwriteFunction extends \Lily\Task {
         const REQUIRED_PARAMS = ["function"];
 
-        const NAME = "RefactorFunction";
+        const NAME = "OverwriteFunction";
 
         public $function = null;
         public $rename = null;

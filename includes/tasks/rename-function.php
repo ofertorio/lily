@@ -24,25 +24,6 @@
         }
 
         protected function run(\Lily\File $file) {
-            // Add a new node visitor to the traverser
-            /*$file->get_traverser()->addVisitor(new class($this) extends \PhpParser\NodeVisitorAbstract {
-                public function __construct($task) {
-                    $this->task = $task;
-                }
-
-                public function enterNode(\PhpParser\Node $node) {
-                    // Check if node is a function
-                    // and if the function name is the same as the function to be renamed
-                    if (
-                        $node instanceof \PhpParser\Node\Stmt\Function_ &&
-                        $node->name->toString() === $this->task->function
-                    ) {
-                        // Set the new name
-                        $node->name->name = $this->task->rename;
-                    }
-                }
-            });*/
-
             // Add the node instruction for the function rename
             $file->add_node_instruction($this, [
                 // Function node
