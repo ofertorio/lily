@@ -9,3 +9,7 @@
     function function_that_will_be_renamed() {
 
     }
+
+    function function_that_will_be_refactored() {
+
+    }

@@ -9,6 +9,23 @@
     namespace Lily;
 
     class Utils {
+        /**
+         * Converts snake case to camel case
+         *
+         * @param string $string The string to be converted
+         * @param string [$sep="-"] The separator
+         * @return string
+         */
+        static function snake_to_camel_case(string $string, string $sep = "-") {
+            return ucfirst(str_replace($sep, "", ucwords($string, $sep)));
+        }
+
+        /**
+         * Joins and resolves a path string
+         *
+         * @param string ...$path
+         * @return string
+         */
         static function path_resolve(string ...$path) {
             // Remove all trailing slashes from the arguments
             $path = array_map(function($p) {

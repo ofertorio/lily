@@ -14,11 +14,22 @@
         static $instance;
 
         /**
-         * Default tasks
-         * 
-         * @var array[string]
+         * Retrieves all built-in tasks
+         *
+         * @return array[string]
          */
-        const DEFAULT_TASKS = ["FindReplace", "RenameVar", "RenameFunction"];
+        static function get_bultin_tasks() {
+            // Find all task files
+            $tasks = glob(__DIR__ . "/tasks/*.php");
+
+            // Parses all task names
+            foreach($tasks as &$task) {
+                $task = str_replace(".php", "", basename($task));
+                $task = "\\Lily\\Tasks\\" . Utils::snake_to_camel_case($task);
+            }
+
+            return $tasks;
+        }
 
         /**
          * An array of registered tasks
@@ -85,9 +96,9 @@
 
         public function __construct(array $options = []) {
             // Iterate over the default tasks
-            foreach(static::DEFAULT_TASKS as $task) {
+            foreach(static::get_bultin_tasks() as $task) {
                 // Register it
-                $this->register_task($task, "\\Lily\\Tasks\\" . $task);
+                $this->register_task($task::NAME, $task);
             }
 
             // Iterate over all options
@@ -206,6 +217,11 @@
             if (is_string($patch)) {
                 // Parse it as a patch file
                 $patch = Patch::from_file($patch);
+
+                // Check if it's not a valid patch file
+                if (!$patch) {
+                    return false;
+                }
             }
 
             $this->patches[] = $patch;

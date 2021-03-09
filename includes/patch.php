@@ -8,20 +8,6 @@
 
     namespace Lily;
 
-    /*
-     * T_ML_COMMENT does not exist in PHP 5.
-     * The following three lines define it in order to
-     * preserve backwards compatibility.
-     *
-     * The next two lines define the PHP 5 only T_DOC_COMMENT,
-     * which we will mask as T_ML_COMMENT for PHP 4.
-    */
-    if (!defined("T_ML_COMMENT")) {
-        define("T_ML_COMMENT", T_COMMENT);
-    } else {
-        define("T_DOC_COMMENT", T_ML_COMMENT);
-    }
-
     class Patch {
         /**
          * A comment regex with all valid annotation names
@@ -29,6 +15,8 @@
          * @var RegExp
          */
         static $comment_regex;
+
+        static $parser;
 
         /**
          * The patch name
@@ -50,11 +38,14 @@
          * @param array|\Lily\Task $task
          * @return \Lily\Task
          */
-        public function add_task($task) {
+        public function add_task($task, \PhpParser\Node $node) {
             // Check if it's a valid task
             if (!($task instanceof \Lily\Task)) {
                 throw new Error("Not a valid Lily patch task, Lily is sad. 😞", "INVALID_PATCH");
             }
+
+            // Set the related task node
+            $task->node = $node;
 
             return array_push($this->tasks, $task);
         }
@@ -91,72 +82,106 @@
             // Create the patch
             $patch = new self();
 
-            // Retrieve all tokens
-            $tokens = token_get_all($content);
+            $ast = null;
 
-            // Iterate over all tokens
-            foreach($tokens as $token) {
-                // Check if it's a string token
-                if (is_string($token)) {
+            if (static::$parser === null) {
+                // Create a new parser if it doesn't exists
+                static::$parser = (new \PhpParser\ParserFactory)->create(\PhpParser\ParserFactory::PREFER_PHP7);
+            }
+
+            try {
+                // Parse it as an AST
+                $ast = static::$parser->parse($content);
+            } catch (\PhpParser\Error $e) {
+                \Lily\Console::error("An error ocurred while parsing patch file `{$filename}`:\n" . $e->getMessage());
+                return null;
+            }
+
+            // Create a node finder
+            $node_finder = new \PhpParser\NodeFinder;
+
+            $comment_nodes = [];
+            $patches = [];
+
+            // Find all multiline comments (possible patches)
+            $comment_nodes = $node_finder->find($ast, function(\PhpParser\Node $node) {
+                return $node->getComments();
+            });
+
+            // Iterate over all found nodes with comments
+            foreach($comment_nodes as $comment_node) {
+                // Retrieve the comments
+                $comments = $comment_node->getComments();
+
+                // Iterate over all comments
+                foreach($comments as $comment) {
+                    // Retrieve the comment text
+                    $text = $comment->getText();
+
+                    // Check if it's a Lily patch
+                    if (strpos($text, "@lily") === -1) {
+                        continue;
+                    }
+
+                    // Add it to the patches
+                    $patches[] = (object) [
+                        "node" => $comment_node,
+                        "comment" => $text
+                    ];
+                }
+            }
+
+            // Iterate over all found patches
+            foreach($patches as $found_patch) {
+                // Parse the patch instructions
+                preg_match_all(self::$comment_regex, $found_patch->comment, $matches, PREG_SET_ORDER);
+
+                // Check if matched nothing
+                if (empty($matches)) {
                     continue;
                 }
 
-                // Extract the token array
-                list($id, $text) = $token;
+                $task = null;
+                $params = new \stdclass;
 
-                // Check if it's a multiline comment
-                // and it contains a @lily annotation
-                if (($id === T_ML_COMMENT || $id === T_DOC_COMMENT) && strpos($text, "@lily") > -1) {
-                    // Parse it
-                    preg_match_all(self::$comment_regex, $text, $matches, PREG_SET_ORDER);
+                // Iterate over all matches
+                foreach($matches as $match) {
+                    // Parse the param name
+                    $param = trim($match["param"]);
 
-                    // Check if matched nothing
-                    if (empty($matches)) {
-                        continue;
-                    }
+                    // Parse the arguments
+                    $args = \Lily\Utils::string_commands_to_array($match["arguments"] ?? "");
 
-                    $task = null;
-                    $params = new \stdclass;
+                    // Save it as a param
+                    $params->{$param} = $args;
+                }
 
-                    // Iterate over all matches
-                    foreach($matches as $match) {
-                        // Parse the param name
-                        $param = trim($match["param"]);
+                // Check if has no task param
+                if (empty($params->task)) {
+                    throw new Error("Tried to create a task from a comment with no task type.", "INVALID_TASK");
+                }
 
-                        // Parse the arguments
-                        $args = \Lily\Utils::string_commands_to_array($match["arguments"] ?? "");
+                // Try retrieving the class related to this task
+                $task_class = \Lily\Patcher::instance()->get_task($params->task);
 
-                        // Save it as a param
-                        $params->{$param} = $args;
-                    }
+                // Check if it doesn't exists
+                if (!class_exists($task_class)) {
+                    \Lily\Console::warn("The task named `{$params->task}` is not registered or doesn't exists.");
+                    continue;
+                }
 
-                    // Check if has no task param
-                    if (empty($params->task)) {
-                        throw new Error("Tried to create a task from a comment with no task type.", "INVALID_TASK");
-                    }
+                try {
+                    // Create the task from the comment matches
+                    $task = $task_class::from_comment($params);
+                } catch (\Error $e) {
+                    \Lily\Console::error("An error ocurred while trying to create a task from a comment: " . $e->getMessage());
+                    return $patch;
+                }
 
-                    // Try retrieving the class related to this task
-                    $task_class = \Lily\Patcher::instance()->get_task($params->task);
-
-                    // Check if it doesn't exists
-                    if (!class_exists($task_class)) {
-                        \Lily\Console::warn("The task named `{$params->task}` is not registered or doesn't exists.");
-                        continue;
-                    }
-
-                    try {
-                        // Create the task from the comment matches
-                        $task = $task_class::from_comment($params);
-                    } catch (\Error $e) {
-                        \Lily\Console::error("An error ocurred while trying to create a task from a comment: " . $e->getMessage());
-                        return $patch;
-                    }
-
-                    // Check if any task was created
-                    if ($task !== null) {
-                        // Add it to the patch
-                        $patch->add_task($task);
-                    }
+                // Check if any task was created
+                if ($task !== null) {
+                    // Add it to the patch
+                    $patch->add_task($task, $found_patch->node);
                 }
             }
 

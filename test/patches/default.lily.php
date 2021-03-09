@@ -37,10 +37,10 @@
      */
 
     /**
-     * @not-lily she grow up within her castle walls
-     * @task FindReplace
-     * @files test.php
-     * @find regex "/( \.)/"
-     * @do function
+     * @lily she grow up within her castle walls
+     * @task RefactorFunction
+     * @function function_that_will_be_refactored
      */
-    fn($match, $content) -> str_replace($match, "", $content);
+    function function_that_will_be_refactored() {
+        echo "yayy! refactored :D";
+    }

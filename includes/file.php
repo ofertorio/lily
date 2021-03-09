@@ -96,8 +96,8 @@
                         }
 
                         // Extract the parameters
-                        $if = $instruction->if;
-                        $do = $instruction->do;
+                        $if = (array) $instruction->if;
+                        $do = (array) $instruction->do;
 
                         // Check for all instructions
                         foreach($if as $index => $cnd) {
@@ -134,6 +134,13 @@
 
                         // Do all instructions
                         foreach($do as $action) {
+                            // Check if it's callable
+                            if (is_callable($action)) {
+                                // Just call the action
+                                call_user_func_array($action, [$node]);
+                                continue;
+                            }
+
                             // Extract the action name
                             $action_name = $action["action"];
                             unset($action["action"]);
